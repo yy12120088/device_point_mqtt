@@ -8,8 +8,6 @@ import java.util.Map;
 
 public interface MqttRadarMessage {
 
-    public abstract boolean removeDevices(List<String> uids) ;
-
     public abstract String OTA(OTADto dto);
 
     public abstract boolean setProperty(String uid, String key, String value) ;
@@ -26,10 +24,5 @@ public interface MqttRadarMessage {
 
     //重启设备,重启加特兰和控制板,1:只重启加特兰,2:只重启控制板
     public abstract boolean restartDevice(String uid, byte type);
-
-    public abstract boolean alarm(String uid, String cmd, String alarmType);
-
-    public abstract boolean accChat(String uid, Integer type, Integer alert);
-
 
 }

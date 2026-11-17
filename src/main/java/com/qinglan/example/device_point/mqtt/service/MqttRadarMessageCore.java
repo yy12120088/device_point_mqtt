@@ -25,25 +25,11 @@ public class MqttRadarMessageCore implements MqttRadarMessage{
     @Lazy
     private EmqxService emqxService;
 
-    @Value("${spring.mqtt.server.apiKey:ee26b0dd4af7e749}")
-    private String mqttApiKey;
-
-    @Value("${spring.mqtt.server.apiSecret:HOJbWSbY9Csregd9BPwZ3jMYosuDjrCvHPxB2QdN9AjZNL}")
-    private String mqttApiSecret;
-
-    @Value("${spring.mqtt.server.apiUrl:http://localhost:18083/api/v5}")
-    private String mqttApiUrl;
-
-    private final String eqtType = "4";
+    private final String eqtType = "88";
     String pFuncTopic = "/func/";
     String pPropTopic = "/prop/";
     String pMonitorTopic = "/monitor/";
     String pNtpTopic = "/ntp/";
-
-    @Override
-    public boolean removeDevices(List<String> uids) {
-        return true;
-    }
 
     @Override
     public String OTA(OTADto otaDto) {
@@ -76,7 +62,7 @@ public class MqttRadarMessageCore implements MqttRadarMessage{
                 flag = true;
             }
         } catch (Exception e) {
-            log.error("rpc调用失败 ----------60G-mqtt----setProperty--{}-----------------", e.getMessage());
+            log.error("setProperty ---------mqtt----setProperty--{}-----------------", e.getMessage());
         }
         return flag;
     }
@@ -93,29 +79,28 @@ public class MqttRadarMessageCore implements MqttRadarMessage{
                 flag = true;
             }
         } catch (Exception e) {
-            log.error("rpc调用失败 ----------60G-mqtt----batchSetProperty--{}-----------------", e.getMessage());
+            log.error("调用失败 ----------mqtt----batchSetProperty--{}-----------------", e.getMessage());
         }
         return flag;
     }
 
     @Override
     public boolean getPositionBreathData(String uid, short seconds) {
-        getMonitorDatas(uid, seconds, "0", 1);
+        getMonitorDatas(uid, seconds, 0);
         return true;
     }
 
-    private void getMonitorDatas(String uid, short seconds, String content, int interval) {
+    private void getMonitorDatas(String uid, short seconds, int content) {
         String topic = pMonitorTopic + eqtType + "/" + uid + "/get";
         MqttMsg mqttMsg = new MqttMsg("subscription");
         JSONObject data = new JSONObject();
         mqttMsg.setData(data);
         data.put("content", content);
         data.put("duration", seconds);
-        data.put("interval", interval);
         try {
             emqxService.publishMsg(topic, mqttMsg, QosEnum.QoS0, false);
         } catch (Exception e) {
-            log.error("rpc调用失败 ---------60G-mqtt-----getPositionBreathData--{}-----------------", e.getMessage());
+            log.error("调用失败 ----------mqtt-----getPositionBreathData--{}-----------------", e.getMessage());
         }
     }
 
@@ -135,7 +120,7 @@ public class MqttRadarMessageCore implements MqttRadarMessage{
                 return jsonObject.getObject("data", Map.class);
             }
         } catch (Exception e) {
-            log.error("rpc调用失败 ---------60G-mqtt----getProperties--{}-----------------", e.getMessage());
+            log.error("调用失败 ----------mqtt----getProperties--{}-----------------", e.getMessage());
         }
         return props;
     }
@@ -152,7 +137,7 @@ public class MqttRadarMessageCore implements MqttRadarMessage{
                 flag = true;
             }
         } catch (Exception e) {
-            log.error("rpc调用失败 ---------60G-mqtt----startVoice--{}-----------------", e.getMessage());
+            log.error("调用失败 ----------mqtt----startVoice--{}-----------------", e.getMessage());
         }
         return flag;
     }
@@ -168,7 +153,7 @@ public class MqttRadarMessageCore implements MqttRadarMessage{
                 flag = true;
             }
         } catch (Exception e) {
-            log.error("rpc调用失败 ---------60G-mqtt----stopVoice--{}-----------------", e.getMessage());
+            log.error("调用失败 ----------mqtt----stopVoice--{}-----------------", e.getMessage());
         }
         return flag;
     }
@@ -187,30 +172,8 @@ public class MqttRadarMessageCore implements MqttRadarMessage{
                 flag = true;
             }
         } catch (Exception e) {
-            log.error("rpc调用失败 ----------60G-mqtt----restartDevice--{}-----------------", e.getMessage());
+            log.error("调用失败 -----------mqtt----restartDevice--{}-----------------", e.getMessage());
         }
         return flag;
     }
-
-    public boolean alarm(String uid, String cmd, String alarmType) {
-        String topic = pFuncTopic + eqtType + "/" + uid + "/get";
-        MqttMsg mqttMsg = new MqttMsg(cmd);
-        JSONObject data = new JSONObject();
-        data.put("type", alarmType);
-        mqttMsg.setData(data);
-        try {
-            emqxService.publishMsg(topic, mqttMsg, QosEnum.QoS0, uid, false);
-            log.info("mqtt消息发送 -------------alarm发送-----------------");
-        } catch (Exception e) {
-            log.error("rpc调用失败 -------------4G版本-alarm--{}-----------------", e.getMessage());
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    public boolean accChat(String uid, Integer type, Integer alert) {
-        return false;
-    }
-
 }

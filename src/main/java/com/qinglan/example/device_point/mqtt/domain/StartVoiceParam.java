@@ -11,7 +11,9 @@ public class StartVoiceParam {
 
     private String license;
 
+    private String licenseKey;
+
     private String channel;
 
-    private String appid;
+    private String appId;
 }

@@ -5,11 +5,11 @@ spring:
       username: admin                      # 账号 无鉴权
       password: eyJhbGciOiJIUzI1NiI                  # 密码
       host-url: tcp://192.168.1.70:1883            # mqtt连接tcp地址
-      client-id: qinglan-1                   # 客户端Id，不能相同，采用随机数 ${random.value}
+      client-id: qinglan-1                   # 客户端Id，不能相同，采用随机数
       timeout: 30                                # 超时时间
       keepalive: 30                              # 保持连接
       clearSession: false                         # 清除会话(设置为false,断开连接，重连后使用原来的会话 保留订阅的主题，能接收离线期间的消息)
-      sessionExpiryInterval: 30                         # 上面为false启动 单位秒
+      sessionExpiryInterval: 60                         # 上面为false启动 单位秒
 #      apiKey: ee26b0dd4af7e749
 #      apiSecret: HOJbWSbY9Csregd9BPwZ3jMYosuDjrCvHPxB2QdN9AjZNL
 #      apiUrl: http://192.168.1.76:18083/api/v5
@@ -19,5 +19,6 @@ spring:
       timeout: 30               # 超时时间
       keepalive: 60             # 保持连接
 qinglan:
-  appid:
-  secret:
+  appid: ql263202602091650526eaa
+  secret: 9e4f79c86f39e85f4b882635c01d5e5e90bf9e17
+  url: https://test.qinglanst.com

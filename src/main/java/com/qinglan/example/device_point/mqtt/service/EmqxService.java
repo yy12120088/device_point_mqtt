@@ -27,11 +27,12 @@ import java.util.concurrent.*;
 public class EmqxService {
     private static final Logger logger = LoggerFactory.getLogger(EmqxService.class);
 
-    // 物模型值命名空间：Key：TSLV:{productId}_{deviceNumber}   HKey:{identity#V/identity#S/identity#M/identity#N}
-//    private String devicePreKey = "TSLV:";
+    private EmqxClient mqttClient;
 
     @Autowired
-    private EmqxClient mqttClient;
+    public void setMqttClient(EmqxClient mqttClient) {
+        this.mqttClient = mqttClient;
+    }
 
     private final Random random = new Random();
     /**
@@ -86,6 +87,7 @@ public class EmqxService {
     public void subscribeCallback(String topic, MqttMessage mqttMessage) throws InterruptedException {
 //        System.err.println(Thread.currentThread().getName());
 //        Thread.sleep(5000);
+        logger.error("收到参数 - topic: {}, message: {}", topic, mqttMessage);
         if (mqttMessage == null) {
             logger.warn("收到空参数 - topic: {}, message: {}", topic, mqttMessage);
             return;
@@ -105,15 +107,12 @@ public class EmqxService {
                 break;
             case "func":
                 reportFunction(eqtTypeId, deviceNum, message);
-//                ruleMatch(productId, deviceNum, message, 2);
                 break;
             case "event":
                 reportEvent(eqtTypeId, deviceNum, message);
-//                ruleMatch(productId, deviceNum, message, 3);
                 break;
             case "alarm":
                 reportAlarm(eqtTypeId, deviceNum, message);
-//                ruleMatch(productId, deviceNum, message, 3);
                 break;
             case "stat":
                 //统计数据
@@ -160,19 +159,6 @@ public class EmqxService {
                 break;
             default:
                 break;
-        }
-    }
-
-    private Long extractAlarmId(Object object) {
-        if (object == null) return null;
-        if (object instanceof Number) {
-            return ((Number) object).longValue();
-        }
-        try {
-            return Long.parseLong(String.valueOf(object));
-        } catch (Exception e) {
-            logger.error("无法解析 alarmId: {}", object);
-            return null;
         }
     }
 
@@ -283,9 +269,8 @@ public class EmqxService {
         }
         logger.error("syncMsg-------------reqId:{}", reqId);
         CompletableFuture<JSONObject> future = responseFutures.remove(reqId);
-//        logger.error("syncMsg-------------future:{}", future);
         if (future != null) {
-            future.complete(msg); // 完成 CompletableFuture
+            future.complete(msg);
         }
     }
 

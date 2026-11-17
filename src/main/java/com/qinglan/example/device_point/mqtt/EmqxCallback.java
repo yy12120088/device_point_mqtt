@@ -26,9 +26,10 @@ public class EmqxCallback implements MqttCallback {
     @Autowired
     private EmqxService emqxService;
 
-    @Lazy
+    /*@Lazy
     @Autowired
-    private EmqxClient emqxClient;
+    private EmqxClient emqxClient;*/
+
 
     @Override
     public void messageArrived(String topic, MqttMessage mqttMessage) throws Exception {
@@ -38,7 +39,7 @@ public class EmqxCallback implements MqttCallback {
     @Override
     public void disconnected(MqttDisconnectResponse mqttDisconnectResponse) {
         logger.error("mqtt断开连接--");
-        emqxClient.refresh();
+//        emqxClient.refresh();
 
     }
 

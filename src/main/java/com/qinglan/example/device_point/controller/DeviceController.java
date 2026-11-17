@@ -1,18 +1,16 @@
 package com.qinglan.example.device_point.controller;
 
 import com.alibaba.fastjson2.JSONObject;
+import com.qinglan.example.device_point.domain.MqttDeviceAuthRequest;
+import com.qinglan.example.device_point.domain.RadarProp;
 import com.qinglan.example.device_point.mqtt.domain.AjaxResult;
 import com.qinglan.example.device_point.mqtt.domain.OTADto;
 import com.qinglan.example.device_point.mqtt.domain.StartVoiceParam;
 import com.qinglan.example.device_point.mqtt.service.MqttRadarMessage;
-import com.qinglan.example.device_point.server.msg.DeviceInfo;
-import com.qinglan.example.device_point.server.msg.ServerLBSInfo;
-import com.qinglan.example.device_point.server.session.DeviceRegSession;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
+import com.qinglan.example.device_point.mqtt.session.DeviceRegSession;
+import com.qinglan.example.device_point.service.DeviceService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -20,8 +18,8 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/test")
-public class TestController {
+@RequestMapping("/prod-api")
+public class DeviceController {
 
     @Resource
     DeviceRegSession deviceRegSession;
@@ -29,18 +27,21 @@ public class TestController {
     @Resource
     MqttRadarMessage mqttRadarMessage;
 
+    @Autowired
+    private DeviceService deviceService;
+
     /**
-     * 订阅设备数据
+     * 订阅设备实时数据
      * @param uid
      * @return  Subscription device data
      * @throws InterruptedException
      */
-    @GetMapping("/test")
-    public Object test(@RequestParam("uid") String uid) throws InterruptedException {
+    @GetMapping("/sub/data")
+    public AjaxResult test(@RequestParam("uid") String uid) throws InterruptedException {
         if (deviceRegSession.isReg(uid)){
             return null;
         }
-        return mqttRadarMessage.getPositionBreathData(uid, (short) 30);
+        return AjaxResult.success(mqttRadarMessage.getPositionBreathData(uid, (short) 60));
     }
 
     /**
@@ -60,16 +61,13 @@ public class TestController {
 
     /**
      * 设置设备属性
-     * @param uid
-     * @return Device prop
-     * @throws InterruptedException
      */
-    @GetMapping("/set/prop")
-    public AjaxResult getProp(@RequestParam("uid") String uid, @RequestParam("key") String key, @RequestParam("value") String value) throws InterruptedException {
-        if (deviceRegSession.isReg(uid)){
+    @PostMapping("/set/prop")
+    public AjaxResult getProp(@RequestBody RadarProp radarProp) throws InterruptedException {
+        if (deviceRegSession.isReg(radarProp.getUid())){
             return null;
         }
-        return AjaxResult.success(mqttRadarMessage.setProperty(uid, key, value));
+        return AjaxResult.success(mqttRadarMessage.batchSetProperty(radarProp.getUid(), radarProp.getProperties()));
     }
 
     /**
@@ -83,12 +81,39 @@ public class TestController {
         if (deviceRegSession.isReg(uid)){
             return null;
         }
-        //todo 远程调用清澜服务器获取license token appid
+        //远程调用清澜服务器获取license token appid
 
-        StartVoiceParam startVoiceParam = new StartVoiceParam();
-        startVoiceParam.setUid(uid);
-        mqttRadarMessage.startVoice(startVoiceParam);
-        return AjaxResult.success();
+        StartVoiceParam startVoiceParam = deviceService.getRadarVoIpLicense(uid);
+        if (startVoiceParam == null){
+            return AjaxResult.error("获取license失败");
+        }
+        if (mqttRadarMessage.startVoice(startVoiceParam)) {
+            return AjaxResult.success(startVoiceParam);
+        }
+        return AjaxResult.error();
+    }
+
+    /**
+     * 关闭通话
+     * @param uid
+     * @return Device prop
+     * @throws InterruptedException
+     */
+    @PostMapping("/stopVoice")
+    public AjaxResult stopHdVoice(@RequestParam("uid") String uid, @RequestParam("licenseKey") String licenseKey) {
+        if (deviceRegSession.isReg(uid)){
+            return null;
+        }
+        //远程调用清澜服务器释放license
+        //https://test.qinglanst.com/prod-api/thirdparty/v2/ReleaseVoIPToken
+        boolean flag = deviceService.releaseRadarVoIpLicense(uid, licenseKey);
+        if (!flag){
+            return AjaxResult.error("释放license失败");
+        }
+        if (mqttRadarMessage.stopVoice(uid)) {
+            return AjaxResult.success();
+        }
+        return AjaxResult.error("设备退出通话失败");
     }
 
     /**
@@ -125,10 +150,6 @@ public class TestController {
      */
     @PostMapping("/auth/connect")
     public void mqttClientConnect(@RequestBody JSONObject jsonObject) {
-        //{"disconnected_at":1749799757707,"disconn_props":{"User-Property":{}},"proto_name":"MQTT","client_attrs":{},"proto_ver":4,"clientid":"ql_AD8A613B1F3F","username":"AD8A613B1F3F","event":"client.disconnected","metadata":{"rule_id":"webhook_WH_D"},
-        // "sockname":"172.17.0.2:1883","peername":"192.168.1.172:63684","timestamp":1749799757707,"reason":"discarded","node":"emqx@172.17.0.2"}
-        //{"receive_maximum":32,"conn_props":{"User-Property":{}},"expiry_interval":0,"clean_start":true,"mountpoint":"undefined","is_bridge":false,"connected_at":1749799757707,"proto_name":"MQTT","client_attrs":{},"proto_ver":4,
-        // "clientid":"ql_AD8A613B1F3F","username":"AD8A613B1F3F","event":"client.connected","metadata":{"rule_id":"webhook_WH_D"},"keepalive":60,"sockname":"172.17.0.2:1883","peername":"192.168.1.172:62028","timestamp":1749799757707,"node":"emqx@172.17.0.2"}
         String clientid = jsonObject.getString("clientid");
         String event = jsonObject.getString("event");
         log.error("mqtt--------c:{}------e-{}", clientid, event);
@@ -144,6 +165,21 @@ public class TestController {
             } else if ("client.disconnected".equals(event)) {
                 deviceRegSession.offLine(clientid.split("_")[1]);
             }
+        }
+    }
+
+    @PostMapping("/thirdmqtt/v2/auth/device")
+    public AjaxResult authenticateDevice(
+            @RequestBody MqttDeviceAuthRequest request) {
+        // 1. 验证请求参数
+        if (request.getUid() == null || request.getType() == null || request.getAuth() == null) {
+            return AjaxResult.error("params is not null");
+        }
+        try {
+            return deviceService.authenticateDevice(request);
+        } catch (Exception e) {
+            log.error("authenticateDevice-------------------erro:{}", e.getMessage());
+            return AjaxResult.error(e.getMessage());
         }
     }
 }

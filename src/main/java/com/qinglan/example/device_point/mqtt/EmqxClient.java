@@ -147,7 +147,7 @@ public class EmqxClient {
         options.setCleanStart(cleanStart);
         options.setSessionExpiryInterval(sessionExpiryInterval);
         //设置自动重新连接
-//        options.setAutomaticReconnect(true);
+        options.setAutomaticReconnect(true);
     }
 
     /**
